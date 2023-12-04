@@ -52,6 +52,8 @@ while :; do
     done
   fi
 
+  # debug
+  jq .salt /tmp/payload
   
   echo Sending payload
   mosquitto_pub -r -h $MQTTHOST -u $MQTTUSER -P $MQTTPASS -t "harvey2mqtt/$SERIAL" -f /tmp/payload
