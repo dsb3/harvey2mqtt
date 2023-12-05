@@ -46,10 +46,15 @@ while :; do
 
     echo Sending reconfiguration messages
     mosquitto_pub -r -h $MQTTHOST -u $MQTTUSER -P $MQTTPASS -t "harvey2mqtt/$SERIAL/availability" -m 'online'
-    for a in battery leftsalt rightsalt daysleft; do
-      cat autoconfig-$a.json | envsubst > /tmp/new-$a.json    
-      mosquitto_pub -r -h $MQTTHOST -u $MQTTUSER -P $MQTTPASS -t "homeassistant/sensor/$SERIAL/$a/config" -f /tmp/new-$a.json
+
+    for autoconfig in *-*.json; do
+      cat $autoconfig | envsubst > /tmp/new-$autoconfig
+      autotype=$( echo $autoconfig | cut -d- -f1 )                 # type of entry: sensor, binary_sensor, etc
+      autoname=$( echo $autoconfig | cut -d- -f2 | cut -d. -f1 )   # name of entry
+      echo mosquitto_pub -r -h $MQTTHOST -u $MQTTUSER -P $MQTTPASS -t "homeassistant/$autotype/$SERIAL/$autoname/config" -f /tmp/new-$autoconfig
     done
+
+
   fi
 
   # debug
