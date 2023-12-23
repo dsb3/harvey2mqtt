@@ -27,16 +27,22 @@ from requests_aws4auth import AWS4Auth
 import paho.mqtt.client as mqtt
 
 
-# parameters for mqtt interface
-mqtthost = os.getenv("MQTTHOST", default="localhost")
-mqttport = os.getenv("MQTTPORT", default="1883")
+# MANDATORY : parameters for harvey interface
+harveyuser = os.environ['HARVEYUSER']
+harveypass = os.environ['HARVEYPASS']
 
+
+# MANDATORY : parameters for mqtt broker
+# (todo: these could be optional, and simply not publish messages is missing)
+mqtthost = os.getenv("MQTTHOST", default="localhost")
+mqttport = os.getenv("MQTTPORT", default="1883")   # note: only supports plain text at the moment
+
+# OPTIONAL : login information for mqtt broker
+# (todo: more optional fields - to include/allow mqtts:// or wss:// with ssl cert verification)
 mqttuser = os.getenv("MQTTUSER", default=False)
 mqttpass = os.getenv("MQTTPASS", default=False)
 
-# parameters for harvey interface
-harveyuser = os.environ['HARVEYUSER']
-harveypass = os.environ['HARVEYPASS']
+
 
 
 # timestamp on when we want to poll for updates - this initial value
@@ -78,12 +84,12 @@ def on_message(client, userdata, msg):
 
 
 
-# In a container, the fqdn will be the full pod name
+# In a container, the fqdn will be the full pod name.  Putting this in the client_id
+# gives better logging options from the mqtt broker
 client = mqtt.Client(client_id="h2m-" + socket.getfqdn())
 client.on_connect = on_connect
 client.on_message = on_message
 
-# TODO: support tls and/or wss
 
 # if user/pass are both defined
 if mqttuser and mqttpass:
@@ -91,8 +97,7 @@ if mqttuser and mqttpass:
 
 
 # LWT
-## enable when ready; disabled for now to not mark the "other" h2m process I have running as offline while I test
-# client.will_set("harvey2mqtt/bridge/state", payload="offline", retain=True)
+client.will_set("harvey2mqtt/bridge/state", payload="offline", retain=True)
 
 client.connect(mqtthost, int(mqttport), 30)
 
