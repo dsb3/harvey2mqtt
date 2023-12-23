@@ -1,25 +1,25 @@
 {
   "availability": [
     { "topic": "harvey2mqtt/bridge/state" },
-    { "topic": "harvey2mqtt/${SERIAL}/availability" }
+    { "topic": "harvey2mqtt/{SERIAL}/availability" }
   ],
   "availability_mode": "all",
   "device": {
-    "identifiers": [ "harvey2mqtt__${SERIAL}" ],
-    "manufacturer": "${BRAND}",
-    "model": "${MODEL}",
+    "identifiers": [ "harvey2mqtt__{SERIAL}" ],
+    "manufacturer": "{BRAND}",
+    "model": "{MODEL}",
     "name": "Harvey Water Softener",
-    "sw_version": "${SWVER}"
+    "sw_version": "{SWVER}"
   },
   "device_class": "update",
   "enabled_by_default": true,
   "entity_category": "diagnostic",
-  "json_attributes_topic": "harvey2mqtt/${SERIAL}",
+  "json_attributes_topic": "harvey2mqtt/{SERIAL}",
   "name": "Low Salt",
   "payload_off": false,
   "payload_on": true,
-  "state_topic": "harvey2mqtt/${SERIAL}",
-  "unique_id": "harvey2mqtt__${SERIAL}__lowsalt",
+  "state_topic": "harvey2mqtt/{SERIAL}",
+  "unique_id": "harvey2mqtt__{SERIAL}__lowsalt",
   "value_template": "{{ true if ( value_json.salt.leftBlocks > 0 or value_json.salt.rightBlocks > 0 ) else false }}"
 }
 

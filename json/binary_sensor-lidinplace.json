@@ -11,14 +11,15 @@
     "name": "Harvey Water Softener",
     "sw_version": "{SWVER}"
   },
+  "device_class": "cover",
   "enabled_by_default": true,
   "entity_category": "diagnostic",
   "json_attributes_topic": "harvey2mqtt/{SERIAL}",
-  "name": "Days Remaining",
-  "state_class": "measurement",
+  "name": "Lid In Place",
+  "payload_off": false,
+  "payload_on": true,
   "state_topic": "harvey2mqtt/{SERIAL}",
-  "unique_id": "harvey2mqtt__{SERIAL}__daysLeft",
-  "unit_of_measurement": "days",
-  "value_template": "{{ value_json.salt.daysLeft }}"
+  "unique_id": "harvey2mqtt__{SERIAL}__lidinplace",
+  "value_template": "{{ true if ( value_json.lidInPlace ) else false }}"
 }
 

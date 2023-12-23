@@ -1,23 +1,23 @@
 {
   "availability": [
     { "topic": "harvey2mqtt/bridge/state" },
-    { "topic": "harvey2mqtt/${SERIAL}/availability" }
+    { "topic": "harvey2mqtt/{SERIAL}/availability" }
   ],
   "availability_mode": "all",
   "device": {
-    "identifiers": [ "harvey2mqtt__${SERIAL}" ],
-    "manufacturer": "${BRAND}",
-    "model": "${MODEL}",
+    "identifiers": [ "harvey2mqtt__{SERIAL}" ],
+    "manufacturer": "{BRAND}",
+    "model": "{MODEL}",
     "name": "Harvey Water Softener",
-    "sw_version": "${SWVER}"
+    "sw_version": "{SWVER}"
   },
   "enabled_by_default": true,
   "entity_category": "diagnostic",
-  "json_attributes_topic": "harvey2mqtt/${SERIAL}",
+  "json_attributes_topic": "harvey2mqtt/{SERIAL}",
   "name": "Right Salt Level",
   "state_class": "measurement",
-  "state_topic": "harvey2mqtt/${SERIAL}",
-  "unique_id": "harvey2mqtt__${SERIAL}__rightsalt",
+  "state_topic": "harvey2mqtt/{SERIAL}",
+  "unique_id": "harvey2mqtt__{SERIAL}__rightsalt",
   "unit_of_measurement": "%",
   "value_template": "{{ value_json.salt.rightPercent }}"
 }
