@@ -1,5 +1,4 @@
 
-json
 python-decouple
 pycognito
 requests-aws4auth

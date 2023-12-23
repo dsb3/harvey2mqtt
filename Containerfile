@@ -13,16 +13,13 @@ RUN pip install --upgrade pip && \
     pip install -r /app/requirements.txt
 
 
-
-COPY scrape-it.py /app
-COPY entrypoint.sh /app
+COPY *.py /app
 COPY json /app
 
-RUN chmod a+rx /app/*.py /app/*.sh
 
 USER 1000
 
 WORKDIR /app
-CMD ["/app/entrypoint.sh" ]
+CMD ["/app/harvey2mqtt.py" ]
 
 
