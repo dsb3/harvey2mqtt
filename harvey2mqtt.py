@@ -49,7 +49,7 @@ printtime = datetime.now()
 # TODO: rc=5 is a "wrong password" response.  If there are too many errors, we
 # should exit and let the container running the script respawn.
 def on_connect(client, userdata, flags, rc):
-    print("Connected with result code "+str(rc))
+    print("Connected to " + mqtthost + " port " + mqttport + " with result code "+str(rc))
 
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
@@ -84,7 +84,6 @@ client.on_connect = on_connect
 client.on_message = on_message
 
 # TODO: support tls and/or wss
-print ("Host " + mqtthost + "  port " + mqttport)
 
 # if user/pass are both defined
 if mqttuser and mqttpass:
@@ -200,12 +199,6 @@ while True:
 
 
         else:
-            ## delete the json entries we don't want to pass through
-            jsondata.pop("thresholds", None)
-            jsondata.pop("dealer", None)
-            jsondata.pop("location", None)
-            jsondata.pop("dummy", None)
-    
             ## extract info for autoconfig json entries
             hdata = {
               "SERIAL": jsondata["ssn"].replace("/", "_"),
@@ -213,6 +206,16 @@ while True:
               "SWVER":  jsondata["fwVersion"],
               "BRAND":  jsondata["brand"]
             }
+
+            ## delete the json entries we don't want to pass through
+            #  (including some of the data we just extracted)
+            jsondata.pop("thresholds", None)
+            jsondata.pop("dealer", None)
+            jsondata.pop("location", None)
+            jsondata.pop("dummy", None)
+            jsondata.pop("fwVersion", None)
+            jsondata.pop("dsn", None)
+            jsondata.pop("brand", None)
     
     
             ## Send the (re)configuration entries
