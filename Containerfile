@@ -6,14 +6,13 @@ RUN apk update && \
     apk add rsync bash procps coreutils && \
     apk add jq mosquitto-clients envsubst
 
-RUN pip install --upgrade pip && \
-    pip install boto3 python-decouple && \
-    pip install pycognito requests-aws4auth && \
-    pip install paho-mqtt
-
-
-
 RUN adduser -h /app -u 1000 -D appuser
+COPY requirements.txt /app
+
+RUN pip install --upgrade pip && \
+    pip install -r /app/requirements.txt
+
+
 
 COPY scrape-it.py /app
 COPY entrypoint.sh /app
