@@ -47,6 +47,8 @@ while :; do
     echo Sending reconfiguration messages
     mosquitto_pub -r -h $MQTTHOST -u $MQTTUSER -P $MQTTPASS -t "harvey2mqtt/$SERIAL/availability" -m 'online'
 
+    ## TODO
+    #    instead of a sensor name of just the serial, it should be something like h2m-$SERIAL to uniquify
     for autoconfig in *-*.json; do
       cat $autoconfig | envsubst > /tmp/new-$autoconfig
       autotype=$( echo $autoconfig | cut -d- -f1 )                 # type of entry: sensor, binary_sensor, etc
