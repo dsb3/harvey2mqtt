@@ -11,6 +11,8 @@ Currently this only supports a single water (or the first?) softener in the resu
 what it looks like, and I'll update to support multiples.
 
 
+From observation (via .lastUpdate), the SWS seems to push an update just a few times per day.  Polling every 45 minutes is perhaps overly frequent.
+
 
 ## TODO - cleanup
 
