@@ -77,18 +77,19 @@ def on_connect(client, userdata, flags, rc):
 
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
-    print(msg.topic+" "+str(msg.payload))
+    print( datetime.now(), " MQTT message: ", msg.topic, " ", str(msg.payload) )
+
 
     # crude - just look for substrings in the topic
     if ( "now" in msg.topic ):
-        print ("  Received message to poll now")
+        print ( "  Received message to poll now")
         global poll
         poll = datetime.now()
 
     if ( "fail" in msg.topic ):
         print ("  Received message to simulate failure")
         global simulatefail
-        simultatefail = True;
+        simulatefail = True;
 
 
 
@@ -117,8 +118,12 @@ client.loop_start()
 
 
 # Debug
-for file in glob.glob("./json/*.json"):
-    print ("Will send autoconfig for: " + file)
+autoconfs = autoconfs = ", ".join(glob.glob("./json/*.json"))
+if autoconfs:
+    print ("Will send autoconfig for: " + autoconfs)
+else:
+    print ("No home-assistant HA json found")
+
 
 
 # Do the first time login to the harvey interface.
@@ -132,6 +137,7 @@ clientid   = '67c9dtgnbjid8l9dh5juih2iq4'
 loginsid   = 'cognito-idp.eu-west-1.amazonaws.com/' + poolid
 
 # Authenticate ... this gives AccessToken, RefreshToken, etc
+print ( datetime.now(), " - performing initial login" )
 botoclient = boto3.client('cognito-idp', 'eu-west-1')
 aws = AWSSRP(username=harveyuser, password=harveypass, pool_id=poolid, client_id=clientid, client=botoclient)
 tokens = aws.authenticate_user()
@@ -153,20 +159,30 @@ u = Cognito(poolid, clientid, id_token=tokens['AuthenticationResult']['IdToken']
 
 
 
-# Setup a regex, and value extractor to format JSON files later.  We can't use
-# string.format(**hdata) because the JSON file contents have too many {}
-_simple_re = re.compile(r'(?<!\\)\$\{([A-Za-z0-9_]+)\}')
-def getval(m):
+# Setup a regex, and value extractor to format JSON files later.
+#
+# Note; uses global hdata instead of ENV.
+#
+# If the text wasn't JSON containing {}, we could use string.format(**hdata), but instead
+# we copy some the regex and logic from https://pypi.org/project/envsubst/
+#
+# our regex is a mix of envsubst's simple and extended.  We support only ${VARNAME} but
+# without offering default values with the ${VARNAME:- and ${VARNAME- formats
+_envsubst_re = re.compile(r'(?<!\\)\$\{([A-Za-z0-9_]+)\}')
+
+def envsubst_getval(m):
     return hdata[m.group(1)] if m.group(1) in hdata.keys() else ""
-                    
+
+
+
+
 
 
 while True:
 
     # Sleep one minute at a time, poll when we arrive at our timestamp; then reset the timestamp into the future
     if datetime.now() > poll:
-        print ( datetime.now() )
-        print ("  polling ...")
+        print ( datetime.now(), " - polling" )
         poll = datetime.now() + timedelta(minutes = 45)
 
         # Check and refresh our token if it's needed
@@ -175,13 +191,23 @@ while True:
 
         # Simulated exception to debug the failure that would otherwise take a long time to trigger
         if (simulatefail):
+            print ("Simulated token failure - attempting to start over and re-login")
+
+            # If we simulate a failure before the first login, this will throw exception
+            try:
+                print ("  Old AccessKeyID: ", r['Credentials']['AccessKeyId'] )
+            except:
+                pass
+
+            # Mark bridge offline until/unless we can recover
+            client.publish("harvey2mqtt/bridge/state", "offline", retain=True)
+
             # cut/paste from exception handling below
-            print ("Simulated exception - attempting to re-login")
             simulatefail = False
             tokens = aws.authenticate_user()
             u = Cognito(poolid, clientid, id_token=tokens['AuthenticationResult']['IdToken'], refresh_token=tokens['AuthenticationResult']['RefreshToken'], access_token=tokens['AuthenticationResult']['AccessToken'])
             r = cog.get_credentials_for_identity( IdentityId = identityid, Logins={loginsid: u.id_token})
-            print ( r['Credentials']['AccessKeyId'] )
+            print ("  New AccessKeyID: ", r['Credentials']['AccessKeyId'] )
 
 
        
@@ -192,9 +218,19 @@ while True:
             ###  r['Credentials']['AccessKeyId']
 
         except botocore.errorfactory.NotAuthorizedException as e:
-            print ("Failed to get credentials for identity - presumed refresh token expired")
+            print ("Failed to get credentials for identity - presumed refresh token expired so logging in fresh")
             print (e.message)
             print (e.args)
+
+            # If we have a failure before the first login, this will throw an exception
+            # TODO: if we fail to relogin "too many times", we should abort and exit
+            try:
+                print ("  Old AccessKeyID: ", r['Credentials']['AccessKeyId'] )
+            except:
+                pass
+
+            # Mark bridge offline until/unless we can recover
+            client.publish("harvey2mqtt/bridge/state", "offline", retain=True)
 
             ### I don't know how far back to start in the process
             ### to do -- how often do we need to back to re-auth?  12 hours might be a default.
@@ -202,6 +238,7 @@ while True:
             u = Cognito(poolid, clientid, id_token=tokens['AuthenticationResult']['IdToken'], refresh_token=tokens['AuthenticationResult']['RefreshToken'], access_token=tokens['AuthenticationResult']['AccessToken'])
             r = cog.get_credentials_for_identity( IdentityId = identityid, Logins={loginsid: u.id_token})
 
+            print ("  New AccessKeyID: ", r['Credentials']['AccessKeyId'] )
             ## todo - if this also fails, we need to restart earlier and log in from even sooner.
 
 
@@ -257,7 +294,7 @@ while True:
                     fcontents = fac.read()
 
                     # read contents, and format/interpolate ${VARS} with a hack from envsubst
-                    acjson = _simple_re.sub( getval, fcontents )
+                    acjson = _envsubst_re.sub( envsubst_getval, fcontents )
 
                     # filename is .../directories/(type)-(name).json
                     # ... type could also be light, switch, etc, but we only expect binary_sensor or sensor
@@ -284,9 +321,11 @@ while True:
             #  "data structure"
 
 
-            # If we have two instances running, and the other has LWT it will mark the bridge
-            # offline.  So, when we publish we refresh to mark this instance online.
-            # todo: it might be better to abandon the LWT configuration entirely
+            # If we failed to refresh the token, we will mark bridge offline, so this is needed to
+            # mark recovery has taken place.
+            #
+            # Also we have two instances running, and the other has LWT it will mark the bridge
+            # offline when it closes, so this helps recover that situation as well.
             client.publish("harvey2mqtt/bridge/state", "online", retain=True)
 
 
