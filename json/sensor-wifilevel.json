@@ -15,7 +15,6 @@
   "entity_category": "diagnostic",
   "json_attributes_topic": "harvey2mqtt/${SERIAL}",
   "name": "Wifi Level",
-  "state_class": "measurement",
   "state_topic": "harvey2mqtt/${SERIAL}",
   "unique_id": "harvey2mqtt__${SERIAL}__wifilevel",
   "value_template": "{{ value_json.wifiLevel }}"
