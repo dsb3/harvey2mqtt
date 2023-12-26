@@ -79,7 +79,6 @@ def on_connect(client, userdata, flags, rc):
 def on_message(client, userdata, msg):
     print( datetime.now(), " MQTT message: ", msg.topic, " ", str(msg.payload) )
 
-
     # crude - just look for substrings in the topic
     if ( "now" in msg.topic ):
         print ( "  Received message to poll now")
@@ -87,7 +86,7 @@ def on_message(client, userdata, msg):
         poll = datetime.now()
 
     if ( "fail" in msg.topic ):
-        print ("  Received message to simulate failure")
+        print ("  Received message to simulate token refresh failure")
         global simulatefail
         simulatefail = True;
 
