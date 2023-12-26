@@ -13,13 +13,13 @@ RUN pip install --upgrade pip && \
     pip install -r /app/requirements.txt
 
 
-COPY *.py /app
-COPY json /app
-
-
 USER 1000
 
 WORKDIR /app
+COPY *.py /app
+COPY ./json/ /app/json/
+
+
 CMD ["/app/harvey2mqtt.py" ]
 
 

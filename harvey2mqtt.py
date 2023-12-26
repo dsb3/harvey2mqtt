@@ -15,7 +15,7 @@
 #  2023-12-02  dbaker   Initial "one shot" script, requiring python and bash to update
 #
 
-import os, glob, time, json, socket
+import os, re, glob, time, json, socket
 from datetime import datetime, timedelta
 
 
@@ -44,11 +44,14 @@ mqttpass = os.getenv("MQTTPASS", default=False)
 
 
 
+# debug -- because I don't know how long it is until a failure to use the refresh token
+# happens, we can try to simulate a failure, and use MQTT to trigger it
+simulatefail = False
+
 
 # timestamp on when we want to poll for updates - this initial value
 # means to poll immediately when ready
 poll = datetime.now()
-printtime = datetime.now()
 
 
 # The callback for when the client receives a CONNACK response from the server.
@@ -63,10 +66,9 @@ def on_connect(client, userdata, flags, rc):
 
     # Publishing in on_connect() means we are sure to resend autoconfig
     # when we start, or need to reconnect to the broker
-    client.publish("harvey2mqtt/bridge/state", "online")
+    client.publish("harvey2mqtt/bridge/state", "online", retain=True)
 
     # Any time we re-connect to the MQTT broker, do a poll as soon as possible
-    # in case it's beneficial
     global poll
     poll = datetime.now()
 
@@ -77,9 +79,16 @@ def on_connect(client, userdata, flags, rc):
 def on_message(client, userdata, msg):
     print(msg.topic+" "+str(msg.payload))
 
-    # crude = just accept any poll activity to mean "poll now"
-    global poll
-    poll = datetime.now()
+    # crude - just look for substrings in the topic
+    if ( "now" in msg.topic ):
+        print ("  Received message to poll now")
+        global poll
+        poll = datetime.now()
+
+    if ( "fail" in msg.topic ):
+        print ("  Received message to simulate failure")
+        global simulatefail
+        simultatefail = True;
 
 
 
@@ -96,14 +105,20 @@ if mqttuser and mqttpass:
   client.username_pw_set(mqttuser, password=mqttpass)
 
 
-# LWT
-client.will_set("harvey2mqtt/bridge/state", payload="offline", retain=True)
+# LWT - if enabled, we mark the bridge as offline when the program disconnects from the broker
+if (os.getenv("MQTTLWT", default=False)):
+  print ("Setting LWT for harvey2mqtt/bridge/state to go offline when disconnecting")
+  client.will_set("harvey2mqtt/bridge/state", payload="offline", retain=True)
 
+
+# Finally, we connect, and loop in the background to allow for our poller to run
 client.connect(mqtthost, int(mqttport), 30)
-
-
-# Start MQTT process in background
 client.loop_start()
+
+
+# Debug
+for file in glob.glob("./json/*.json"):
+    print ("Sending autoconfig for: " + file)
 
 
 # Do the first time login to the harvey interface.
@@ -138,34 +153,46 @@ u = Cognito(poolid, clientid, id_token=tokens['AuthenticationResult']['IdToken']
 
 
 
+# Setup a regex, and value extractor to format JSON files later.  We can't use
+# string.format(**hdata) because the JSON file contents have too many {}
+_simple_re = re.compile(r'(?<!\\)\$\{([A-Za-z0-9_]+)\}')
+def getval(m):
+    return hdata[m.group(1)] if m.group(1) in hdata.keys() else ""
+                    
+
 
 while True:
 
-    # Debug to print timestamp just once every hour, but we sleep in one
-    # minute blocks to allow for faster "poll now" requests
-    if datetime.now() > printtime:
-      print ( datetime.now() )
-      printtime = datetime.now() + timedelta(hours = 30)
-
-      # debugging - print every minute
-      #printtime = datetime.now() + timedelta(minutes = 1)
-
-
+    # Sleep one minute at a time, poll when we arrive at our timestamp; then reset the timestamp into the future
     if datetime.now() > poll:
+        print ( datetime.now() )
         print ("  polling ...")
         poll = datetime.now() + timedelta(minutes = 45)
 
         # Check and refresh our token if it's needed
         u.check_token()
 
+
+        # Simulated exception to debug the failure that would otherwise take a long time to trigger
+        if (simulatefail):
+            # cut/paste from exception handling below
+            print ("Simulated exception - attempting to re-login")
+            simulatefail = False
+            tokens = aws.authenticate_user()
+            u = Cognito(poolid, clientid, id_token=tokens['AuthenticationResult']['IdToken'], refresh_token=tokens['AuthenticationResult']['RefreshToken'], access_token=tokens['AuthenticationResult']['AccessToken'])
+            r = cog.get_credentials_for_identity( IdentityId = identityid, Logins={loginsid: u.id_token})
+            print ( r['Credentials']['AccessKeyId'] )
+
+
+       
         # This will (presumably) fail if the refresh token is also expired
         try:
             r = cog.get_credentials_for_identity( IdentityId = identityid, Logins={loginsid: u.id_token})
             # debug - print them
             ###  r['Credentials']['AccessKeyId']
-        except botocore.errorfactory.NotAuthorizedExceptioni as e:
+
+        except botocore.errorfactory.NotAuthorizedException as e:
             print ("Failed to get credentials for identity - presumed refresh token expired")
-            print ( datetime.now() )
             print (e.message)
             print (e.args)
 
@@ -224,12 +251,45 @@ while True:
     
     
             ## Send the (re)configuration entries
-    
-            # for file in glob.glob("/path/*.json"):
-            #     print (file)
+            for file in glob.glob("./json/*.json"):
+                try:
+                    fac = open(file, "r")
+                    fcontents = fac.read()
 
-            ##  ''' some string {SERIAL} ...'''.format(**hdata)
-    
+                    # read contents, and format/interpolate ${VARS} with a hack from envsubst
+                    acjson = _simple_re.sub( getval, fcontents )
+
+                    # filename is .../directories/(type)-(name).json
+                    # ... type could also be light, switch, etc, but we only expect binary_sensor or sensor
+                    m = re.search(r'.*/(binary_sensor|sensor)-(\w+)\.json', file)
+
+                    # publish home-assistant auto-config
+                    # todo: also consider clean up of old autoconfig entries if we remove the "integration"
+                    if m:
+                        cdata = { "SERIAL": hdata["SERIAL"], "TYPE": m.group(1), "NAME": m.group(2) }
+                        client.publish("homeassistant/{TYPE}/h2m_{SERIAL}/{NAME}/config".format(**cdata), acjson, retain=True)
+
+                    fac.close()
+
+                except Exception as e:
+                    print ("Failed to send autoconfig information for " + file)
+                    print (e.message)
+                    print (e.args)
+            
+   
+            ## TODO - it might be more sensible to just send data as 
+            #  harvey2mqtt/0 and harvey2mqtt/1 to support multi-devices,
+            #  instead of embedding the device serial number in the message
+            #  topic, especially as we assume full control of the harvey2mqtt/
+            #  "data structure"
+
+
+            # If we have two instances running, and the other has LWT it will mark the bridge
+            # offline.  So, when we publish we refresh to mark this instance online.
+            # todo: it might be better to abandon the LWT configuration entirely
+            client.publish("harvey2mqtt/bridge/state", "online", retain=True)
+
+
             ## Send availability
             #    todo - mark offline if jsondata["lastUpdate"] is too old
             client.publish("harvey2mqtt/" + hdata["SERIAL"] + "/availability", "online")
@@ -240,10 +300,6 @@ while True:
             print (json.dumps(jsondata))
 
 
-
     # Wait between runs
     time.sleep(60)
-
-
-
 
