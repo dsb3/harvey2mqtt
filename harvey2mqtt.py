@@ -90,7 +90,10 @@ def on_message(client, userdata, msg):
         global simulatefail
         simulatefail = True;
 
-
+    # forceful exit - sys.exit() may end up waiting
+    if ( "kill" in msg.topic ):
+        print ("  Received message to exit")
+        os._exit(0)
 
 
 # In a container, the fqdn will be the full pod name.  Putting this in the client_id
