@@ -182,7 +182,7 @@ while True:
     # Sleep one minute at a time, poll when we arrive at our timestamp; then reset the timestamp into the future
     if datetime.now() > poll:
         print ( datetime.now(), " - polling" )
-        poll = datetime.now() + timedelta(minutes = 45)
+        poll = datetime.now() + timedelta(minutes = 90)
 
         # Check and refresh our token if it's needed
         u.check_token()
