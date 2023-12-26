@@ -306,7 +306,7 @@ while True:
                     # todo: also consider clean up of old autoconfig entries if we remove the "integration"
                     if m:
                         cdata = { "SERIAL": hdata["SERIAL"], "TYPE": m.group(1), "NAME": m.group(2) }
-                        client.publish("homeassistant/{TYPE}/h2m_{SERIAL}/{NAME}/config".format(**cdata), acjson, retain=True)
+                        client.publish("homeassistant/{TYPE}/harvey2mqtt/{SERIAL}_{NAME}/config".format(**cdata), acjson, retain=True)
 
                     fac.close()
 
