@@ -1,25 +1,25 @@
 {
   "availability": [
     { "topic": "harvey2mqtt/bridge/state" },
-    { "topic": "harvey2mqtt/{SERIAL}/availability" }
+    { "topic": "harvey2mqtt/${SERIAL}/availability" }
   ],
   "availability_mode": "all",
   "device": {
-    "identifiers": [ "harvey2mqtt__{SERIAL}" ],
-    "manufacturer": "{BRAND}",
-    "model": "{MODEL}",
+    "identifiers": [ "harvey2mqtt__${SERIAL}" ],
+    "manufacturer": "${BRAND}",
+    "model": "${MODEL}",
     "name": "Harvey Water Softener",
-    "sw_version": "{SWVER}"
+    "sw_version": "${SWVER}"
   },
   "device_class": "cover",
   "enabled_by_default": true,
   "entity_category": "diagnostic",
-  "json_attributes_topic": "harvey2mqtt/{SERIAL}",
+  "json_attributes_topic": "harvey2mqtt/${SERIAL}",
   "name": "Lid In Place",
   "payload_off": false,
   "payload_on": true,
-  "state_topic": "harvey2mqtt/{SERIAL}",
-  "unique_id": "harvey2mqtt__{SERIAL}__lidinplace",
+  "state_topic": "harvey2mqtt/${SERIAL}",
+  "unique_id": "harvey2mqtt__${SERIAL}__lidinplace",
   "value_template": "{{ true if ( value_json.lidInPlace ) else false }}"
 }
 
