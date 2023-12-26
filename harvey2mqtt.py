@@ -118,7 +118,7 @@ client.loop_start()
 
 # Debug
 for file in glob.glob("./json/*.json"):
-    print ("Sending autoconfig for: " + file)
+    print ("Will send autoconfig for: " + file)
 
 
 # Do the first time login to the harvey interface.
