@@ -18,7 +18,6 @@
   "state_class": "measurement",
   "state_topic": "harvey2mqtt/${SERIAL}",
   "unique_id": "harvey2mqtt__${SERIAL}__wifilevel",
-  "unit_of_measurement": "days",
   "value_template": "{{ value_json.wifiLevel }}"
 }
 
