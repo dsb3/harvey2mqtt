@@ -58,7 +58,7 @@ poll = datetime.now()
 # TODO: rc=5 is a "wrong password" response.  If there are too many errors, we
 # should exit and let the container running the script respawn.
 def on_connect(client, userdata, flags, rc):
-    print( datetime.now().replace(microsecond=0), " Connected to " + mqtthost + " port " + mqttport + " with result code "+str(rc))
+    print( datetime.now().replace(microsecond=0), " - connected to " + mqtthost + " port " + mqttport + " with result code "+str(rc))
 
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
