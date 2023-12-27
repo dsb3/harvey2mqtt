@@ -353,6 +353,6 @@ while True:
             print (json.dumps(jsondata))
 
 
-    # Wait between runs
-    time.sleep(60)
+    # Wait between runs -- sleep to resynchronize to the minutes xx:yy:00
+    time.sleep(60 - datetime.now().second)
 
