@@ -1,0 +1,24 @@
+{
+  "availability": [
+    { "topic": "harvey2mqtt/bridge/state" },
+    { "topic": "harvey2mqtt/${SERIAL}/availability" }
+  ],
+  "availability_mode": "all",
+  "device": {
+    "identifiers": [ "harvey2mqtt__${SERIAL}" ],
+    "manufacturer": "${BRAND}",
+    "model": "${MODEL}",
+    "name": "Harvey Water Softener",
+    "sw_version": "${SWVER}"
+  },
+  "enabled_by_default": true,
+  "entity_category": "diagnostic",
+  "json_attributes_topic": "harvey2mqtt/bridge/authfailure",
+  "name": "Debug Auth Failure",
+  "payload_off": false,
+  "payload_on": true,
+  "state_topic": "harvey2mqtt/bridge/authfailure",
+  "unique_id": "harvey2mqtt__${SERIAL}__debugauthfailure",
+  "value_template": "{{ true if ( value_json.type == 'failed' ) else false }}"
+}
+

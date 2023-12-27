@@ -204,6 +204,9 @@ while True:
             # Mark bridge offline until/unless we can recover
             client.publish("harvey2mqtt/bridge/state", "offline", retain=True)
 
+            # Send a message so we can see it happened
+            client.publish("harvey2mqtt/bridge/simulateauthfailure", '{ "type": "simulated", "timestamp": "%s" }' % (str(datetime.now())), retain=False)
+
             # cut/paste from exception handling below
             simulatefail = False
             tokens = aws.authenticate_user()
@@ -223,6 +226,9 @@ while True:
             print ("Failed to get credentials for identity - presumed refresh token expired so logging in fresh")
             print (e.message)
             print (e.args)
+
+            # Send a message so we can see it happened
+            client.publish("harvey2mqtt/bridge/simulateauthfailure", '{ "type": "failed", "timestamp": "%s" }' % (str(datetime.now())), retain=True)
 
             # If we have a failure before the first login, this will throw an exception
             # TODO: if we fail to relogin "too many times", we should abort and exit
