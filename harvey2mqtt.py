@@ -58,7 +58,7 @@ poll = datetime.now()
 # TODO: rc=5 is a "wrong password" response.  If there are too many errors, we
 # should exit and let the container running the script respawn.
 def on_connect(client, userdata, flags, rc):
-    print("Connected to " + mqtthost + " port " + mqttport + " with result code "+str(rc))
+    print( datetime.now().replace(microsecond=0), " Connected to " + mqtthost + " port " + mqttport + " with result code "+str(rc))
 
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
@@ -77,7 +77,7 @@ def on_connect(client, userdata, flags, rc):
 
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
-    print( datetime.now(), " MQTT message: ", msg.topic, " ", str(msg.payload) )
+    print( datetime.now().replace(microsecond=0), " MQTT message: ", msg.topic, " ", str(msg.payload) )
 
     # crude - just look for substrings in the topic
     if ( "now" in msg.topic ):
@@ -139,7 +139,7 @@ clientid   = '67c9dtgnbjid8l9dh5juih2iq4'
 loginsid   = 'cognito-idp.eu-west-1.amazonaws.com/' + poolid
 
 # Authenticate ... this gives AccessToken, RefreshToken, etc
-print ( datetime.now(), " - performing initial login" )
+print ( datetime.now().replace(microsecond=0), " - performing initial login" )
 botoclient = boto3.client('cognito-idp', 'eu-west-1')
 aws = AWSSRP(username=harveyuser, password=harveypass, pool_id=poolid, client_id=clientid, client=botoclient)
 tokens = aws.authenticate_user()
@@ -184,8 +184,14 @@ while True:
 
     # Sleep one minute at a time, poll when we arrive at our timestamp; then reset the timestamp into the future
     if datetime.now() > poll:
-        print ( datetime.now(), " - polling" )
-        poll = datetime.now() + timedelta(minutes = 90)
+        print ( datetime.now().replace(microsecond=0), " - polling" )
+
+        # poll again 90 minutes in the future
+        #poll = datetime.now() + timedelta(minutes = 90)
+
+        # poll again, synchronized to the closest half hour, 90 minutes in the future
+        tnow = datetime.now()
+        poll = tnow.replace(minute = tnow.minute - tnow.minute % 30, second=0, microsecond=0) + timedelta (minutes=90)
 
         # Check and refresh our token if it's needed
         u.check_token()
@@ -205,7 +211,7 @@ while True:
             client.publish("harvey2mqtt/bridge/state", "offline", retain=True)
 
             # Send a message so we can see it happened
-            client.publish("harvey2mqtt/bridge/simulateauthfailure", '{ "type": "simulated", "timestamp": "%s" }' % (str(datetime.now())), retain=False)
+            client.publish("harvey2mqtt/bridge/simulateauthfailure", '{ "type": "simulated", "timestamp": "%s" }' % (str(datetime.now().replace(microsecond=0))), retain=False)
 
             # cut/paste from exception handling below
             simulatefail = False
@@ -228,7 +234,7 @@ while True:
             print (e.args)
 
             # Send a message so we can see it happened
-            client.publish("harvey2mqtt/bridge/simulateauthfailure", '{ "type": "failed", "timestamp": "%s" }' % (str(datetime.now())), retain=True)
+            client.publish("harvey2mqtt/bridge/simulateauthfailure", '{ "type": "failed", "timestamp": "%s" }' % (str(datetime.now().replace(microsecond=0))), retain=True)
 
             # If we have a failure before the first login, this will throw an exception
             # TODO: if we fail to relogin "too many times", we should abort and exit
