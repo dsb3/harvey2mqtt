@@ -1,0 +1,25 @@
+{
+  "availability": [
+    { "topic": "harvey2mqtt/bridge/state" },
+    { "topic": "harvey2mqtt/${SERIAL}/availability" }
+  ],
+  "availability_mode": "all",
+  "device": {
+    "identifiers": [ "harvey2mqtt__${SERIAL}" ],
+    "manufacturer": "${BRAND}",
+    "model": "${MODEL}",
+    "name": "Harvey Water Softener",
+    "sw_version": "${SWVER}"
+  },
+  "enabled_by_default": true,
+  "entity_category": "diagnostic",
+  "json_attributes_topic": "harvey2mqtt/${SERIAL}",
+  "name": "Data is Stale",
+  "payload_off": false,
+  "payload_on": true,
+  "state_topic": "harvey2mqtt/${SERIAL}",
+  "unique_id": "harvey2mqtt__${SERIAL}__stale",
+  "value_template": "{{ true if ( now().timestamp() - (value_json.lastUpdate / 1000) > (60*60*24*3) ) else false }}"
+}
+
+
